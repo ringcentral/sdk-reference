@@ -8,6 +8,8 @@ module RC.http {
 
         private headers:IHeadersObject;
 
+        hasHeader(name:string):boolean;
+
         getHeader(name:string):string;
 
         setHeader(name:string, value:string):Headers;
