@@ -49,7 +49,7 @@ module RC.platform {
 
         put(url:string, options:IOptions):RC.http.Response;
 
-        remove(url:string, options?:IOptions):RC.http.Response; // Could be also delete, but it is a reserved word
+        delete(url:string, options?:IOptions):RC.http.Response; // Could be also delete, but it is a reserved word
 
     }
 
