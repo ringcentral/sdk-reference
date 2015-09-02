@@ -1,9 +1,19 @@
-var sdk = new RC.SDK('appKey', 'appSecret', 'server'),
-    platform = sdk.getPlatform();
+var sdk = new RingCentral.ReferenceSDK.SDK('appKey', 'appSecret', 'server'),
+    platform = sdk.platform();
 
 // Auth
 
 platform.authorize('123', null, 'P@assW0rd');
+
+// Auth get/set
+
+var authData = platform.auth().data();
+platform.auth().setData(authData);
+
+// Call
+
+var req = new RingCentral.ReferenceSDK.native.Request('POST', '/foo');
+platform.send(req).json();
 
 // Simple get
 
@@ -12,27 +22,26 @@ console.log(extension.name);
 
 // Subscription
 
-var subscription = sdk.getSubscription();
-
-subscription
+sdk.createSubscription()
+    .setEvents(['/account/~/extension/~/presence'])
     .addEvents(['/account/~/extension/~/presence'])
-    .on('notification', function (msg) {
-            console.log(msg);
-        })
+    .on('notification', function(msg) {
+        console.log(msg);
+    })
     .register();
 
 // Post data
 
-var sms = platform.post('/account/~/extension/~/sms', {
-    body: {
+platform
+    .post('/account/~/extension/~/sms', {
         from: {phoneNumber: '...'},
         to: [{phoneNumber: '...'}],
         text: '...'
-    }
-}).getJson();
+    })
+    .json();
 
 // Multipart
 
-var multiparts = platform.get('/account/~/extension/1,2,3/presence').getResponses();
-console.log(multiparts[0].getJson());
-console.log(multiparts[1].getJson());
+platform.get('/account/~/extension/1,2,3/presence').multipart()[0].json();
+platform.get('/account/~/extension/1,2,3/presence').multipart()[0].response().status();
+platform.get('/account/~/extension/1,2,3/presence').multipart()[0].response().statusText();

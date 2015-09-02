@@ -1,55 +1,143 @@
-module RC.platform {
+module RingCentral.ReferenceSDK.platform {
 
-    export declare interface IOptions {
-        method?: string;
-        url?: string;
-        query?: any;
-        headers?: RC.http.IHeadersObject;
-        body?: any;
+    export declare interface ICallOptions {
+        skipAuthCheck?: boolean;
     }
 
-    export declare interface IUrlOptions {
-        addServer?: boolean;
-        addToken?: boolean;
-        addMethod?: boolean;
-    }
+    export class Platform {
 
-    export declare class Platform {
+        private _auth:Auth;
+        private _server:string;
+        private _appKey:string;
+        private _appSecret:string;
+        private _client:http.Client;
 
-        private auth:Auth;
-        private server:string;
-        private appKey:string;
-        private appSecret:string;
+        constructor(client:http.Client, appKey:string, appSecret:string, server:string);
 
-        constructor(appKey:string, appSecret:string, server:string);
+        /**
+         * Assembles the fully qualified URL of the resource by adding server, /restapi/ and version to provided path
+         * @param path
+         * @param options
+         */
+        createUrl(path:string, options?:{addServer?: boolean; addToken?: boolean; addMethod?: boolean}):string;
 
-        getAuthData():IAuthData;
+        auth():Auth {
+            return this._auth;
+        }
 
-        setAuthData(data:IAuthData):Platform;
+        loggedIn() {
+            try {
+                if (this._auth.accessTokenValid() || this.refresh()) return true;
+            } catch (e) {
+                return false;
+            }
+        }
 
-        isTokenValid();
+        /**
+         * @throws ApiException
+         */
+        login(username:string, extension:string, password:string, remember?:boolean):http.ApiResponse {
+            return this.requestToken('', {});
+        }
 
-        isAuthorized(refresh:boolean = true);
+        /**
+         * Returns null if nothing needs to be done or refresh has occured in other tab
+         * If refresh has been performed then ApiResponse will be returned
+         * This method should be synchronized, e.g. only one refresh can be in progress
+         * @throws ApiException
+         */
+        refresh():http.ApiResponse {
 
-        apiUrl(url:string, options?:IUrlOptions):string;
+            if (!this._auth.refreshTokenValid()) {
+                throw new http.ApiException(null, new Error('Refresh Token is not valid'));
+            }
 
-        authorize(username:string, extension:string, password:string, remember?:boolean):RC.http.Response;
+            //do refresh
+            return this.requestToken('', {});
 
-        refresh():RC.http.Response;
+        }
 
-        logout():RC.http.Response;
+        /**
+         * @throws ApiException
+         */
+        logout():http.ApiResponse {
+            return this.requestToken('', {});
+        }
 
-        apiCall(options:IOptions):RC.http.Response;
+        /**
+         * Convenience helper used for processing requests (even externally created)
+         * Performs access token refresh if needed
+         * Then adds Authorization header and API server to URI
+         * @throws ApiException
+         */
+        inflateRequest(request:native.Request, options?:ICallOptions):native.Request {
+            if (!options.skipAuthCheck) {
+                this.ensureAuthentication();
+                request.headers['Authorization'] = this.authHeader();
+            }
+            request.headers['User-Agent'] = '...';
+            return request;
+        }
 
-        authCall(options:IOptions):RC.http.Response;
+        /**
+         * Method sends the request (even externally created) to API server using client
+         * @throws ApiException
+         */
+        sendRequest(request:native.Request, options?:ICallOptions):http.ApiResponse {
+            return this._client.sendRequest(this.inflateRequest(request, options));
+        }
 
-        get(url:string, options?:IOptions):RC.http.Response;
+        /**
+         * The order of arguments is dictated by how frequently they are used
+         * @throws ApiException
+         */
+        get(url:string, query?:any, headers?:any, options?:ICallOptions):http.ApiResponse {
+            return this.sendRequest(this._client.createRequest('GET', url, query, null, headers), options);
+        }
 
-        post(url:string, options:IOptions):RC.http.Response;
+        /**
+         * The order of arguments is dictated by how frequently they are used
+         * @throws ApiException
+         */
+        post(url:string, body?:any, query?:any, headers?:any, options?:ICallOptions):http.ApiResponse {
+            return this.sendRequest(this._client.createRequest('GET', url, query, body, headers), options);
+        }
 
-        put(url:string, options:IOptions):RC.http.Response;
+        /**
+         * The order of arguments is dictated by how frequently they are used
+         * @throws ApiException
+         */
+        put(url:string, body?:any, query?:any, headers?:any, options?:ICallOptions):http.ApiResponse {
+            return this.sendRequest(this._client.createRequest('GET', url, query, body, headers), options);
+        }
 
-        delete(url:string, options?:IOptions):RC.http.Response; // Could be also delete, but it is a reserved word
+        /**
+         * The order of arguments is dictated by how frequently they are used
+         * @throws ApiException
+         */
+        'delete'(url:string, query?:any, headers?:any, options?:ICallOptions):http.ApiResponse {
+            return this.sendRequest(this._client.createRequest('GET', url, query, null, headers), options);
+        }
+
+        protected ensureAuthentication() {
+            if (!this._auth.accessTokenValid()) this.refresh();
+        }
+
+        /**
+         * @throws ApiException
+         */
+        protected requestToken(path:string, body:any):http.ApiResponse {
+            var req = this._client.createRequest('POST', path, null, body, {'Authorization': 'Basic ' + this.apiKey()});
+            return this.sendRequest(req, {skipAuthCheck: true});
+        }
+
+        protected apiKey():string {
+            return btoa(this._appKey + ':' + this._appSecret);
+        }
+
+        protected authHeader():string {
+            return this._auth.tokenType() + ' ' + this._auth.accessToken();
+        }
 
     }
 

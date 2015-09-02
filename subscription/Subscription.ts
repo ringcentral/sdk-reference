@@ -1,6 +1,6 @@
-module RC.subscription {
+module RingCentral.ReferenceSDK.subscription {
 
-    declare interface IDeliveryMode {
+    export declare interface IDeliveryMode {
         transportType: string;
         encryption: boolean;
         address: string;
@@ -8,7 +8,7 @@ module RC.subscription {
         secretKey: string;
     }
 
-    declare interface ISubscription {
+    export declare interface ISubscription {
         eventFilters: string[];
         expirationTime: string;
         expiresIn: number;
@@ -19,54 +19,135 @@ module RC.subscription {
         uri: string;
     }
 
-    declare class PUBNUB {
-
-        constructor(subscribeKey:string);
-
-    }
-
-    declare interface IOptions {
+    export declare interface IOptions {
         events: string[];
     }
 
-    declare class Subscription {
+    export class Subscription {
 
-        private platform:RC.platform.Platform;
-        private pubnub:PUBNUB;
-        private eventFilters:string[];
-        private subscription:ISubscription;
+        private _platform:platform.Platform;
+        private _pubnubFactory:pubnub.PubnubFactory;
+        private _eventFilters:string[];
+        private _subscription:ISubscription;
 
-        constructor(platform:RC.platform.Platform);
+        constructor(platform:platform.Platform, pubnubFactory:pubnub.PubnubFactory);
 
-        addEvents(events:string[]):Subscription;
+        // Working with events
 
-        setEvents(events:string[]):Subscription;
+        /**
+         * Append more events to existing array
+         */
+        addEvents(events:string[]):Subscription {
+            this._eventFilters = this._eventFilters.concat(events);
+            return this;
+        }
 
-        register(options?:IOptions):RC.http.Response;
+        /**
+         * Replace the whole events array with a new one
+         */
+        setEvents(events:string[]):Subscription {
+            this._eventFilters = events;
+            return this;
+        }
 
-        renew(options?:IOptions):RC.http.Response;
+        // Lifecycle
 
-        subscribe(options?:IOptions):RC.http.Response;
+        /**
+         * Must verify that this._subscription object exists and has all the required fields: id, deliveryMode, etc.
+         */
+        alive():boolean {
+            return this._subscription &&
+                   this._subscription.id &&
+                   this._subscription.deliveryMode &&
+                   this._subscription.deliveryMode.subscriberKey &&
+                   this._subscription.deliveryMode.address;
+        }
 
-        remove(options?:IOptions):RC.http.Response;
+        /**
+         * If options.event were provided it must replace existing events
+         */
+        register(options?:IOptions):http.ApiResponse {
+            if (this.alive()) {
+                return this.renew(options);
+            } else {
+                return this.subscribe(options);
+            }
+        }
 
-        isSubscribed():boolean;
+        /**
+         * If options.event were provided it must replace existing events
+         */
+        subscribe(options?:IOptions):http.ApiResponse;
 
+        /**
+         * If options.event were provided it must replace existing events
+         */
+        renew(options?:IOptions):http.ApiResponse;
+
+        remove():http.ApiResponse;
+
+        /**
+         * This must be called by subscribe() and renew() in order to start renew timer and subscribe at PUBNUB
+         * Client must call register afterwards
+         * Should also update local eventFilters to actual eventFilters
+         * @param subscription
+         */
+        setSubscription(subscription:ISubscription);
+
+        /**
+         * Must reset subscription object and disconnect from PUBNUB
+         * This method resets subscription at client side but backend is not notified
+         */
+        reset();
+
+        /**
+         * Returns current subscription data
+         */
+        subscription():ISubscription;
+
+        // Observable
+
+        /**
+         * This should follow language convention -- e.g. addListener in PHP
+         */
         on(event:string, callback:(...args)=>void):Subscription;
 
+        /**
+         * This should follow language convention -- e.g. addListener in PHP
+         */
         off(event:string, callback:(...args)=>void):Subscription;
 
-        emit(event:string):any;
+        /**
+         * This should follow language convention -- e.g. addListener in PHP
+         */
+        emit(event:string, ...args):any;
 
-        private getFullEventFilters():string[];
+        /**
+         *
+         * @return {string[]}
+         */
+        private createFullUrlsFromEventFilters():string[] {
+            return this._eventFilters.map((event) => {
+                return this._platform.createUrl(event);
+            });
+        }
 
-        private updateSubscription(subscription:ISubscription);
+        private subscribeAtPubnub() {
+            this._pubnubFactory.getPubnub().subscribe(this._subscription);
+        }
 
-        private unsubscribe();
+        /**
+         * Must decode the AES-encrypted message (128-bit, mode ECB, padding PKCS7) and return it as JSON object
+         */
+        private decrypt(message:string):any;
 
-        private subscribeAtPubnub();
-
-        private notify();
+        /**
+         * Internal method provided to PUBNUB as a callback
+         * Must emit decrypted message
+         */
+        private notify(pubnubMessage) {
+            this.emit('notification', this.decrypt(pubnubMessage));
+        }
 
     }
 

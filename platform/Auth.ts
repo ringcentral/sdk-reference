@@ -1,58 +1,44 @@
-module RC.platform {
+module RingCentral.ReferenceSDK.platform {
 
     export declare interface IAuthData {
+        remember:boolean;
         token_type:string;
-
         access_token:string;
         expires_in:number;
-        expire_time:number;
-
         refresh_token:string;
         refresh_token_expires_in:number;
-        refresh_token_expire_time:number;
-
         scope:string;
         owner_id:string;
     }
 
     export declare class Auth {
 
-        private remember:boolean;
-
-        private token_type:string;
-
-        private access_token:string;
-        private expires_in:number;
-        private expire_time:number;
-
-        private refresh_token:string;
-        private refresh_token_expires_in:number;
-        private refresh_token_expire_time:number;
-
-        private scope:string;
-        private owner_id:string;
+        private _data:IAuthData;
 
         constructor();
 
+        data():IAuthData;
+
         setData(data:IAuthData):Auth;
 
-        getData():IAuthData;
+        reset():Auth;
 
-        reset():IAuthData;
+        tokenType():string;
 
-        getAccessToken():string;
+        accessToken():string;
 
-        getRefreshToken():string;
+        accessTokenValid():boolean;
 
-        getTokenType():string;
+        refreshToken():string;
 
-        isAccessTokenValid():boolean;
+        refreshTokenValid():boolean;
 
-        isRefreshTokenValid():boolean;
+        /**
+         * This is used in JS SDK to store Access/Refresh tokens TTL setting
+         */
+        remember():boolean;
 
-        setRemember(remember:boolean):Auth;
-
-        isRemember():boolean;
+        setRemember(remember?:boolean):Auth;
 
     }
 
