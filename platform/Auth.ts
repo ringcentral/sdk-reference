@@ -1,3 +1,5 @@
+/// <reference path="../externals/index.ts" />
+
 module RingCentral.ReferenceSDK.platform {
 
     export declare interface IAuthData {
