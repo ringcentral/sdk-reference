@@ -1,3 +1,5 @@
+/// <reference path="../externals/index.ts" />
+
 module RingCentral.ReferenceSDK.subscription {
 
     export declare interface IDeliveryMode {
@@ -23,14 +25,17 @@ module RingCentral.ReferenceSDK.subscription {
         events: string[];
     }
 
-    export class Subscription {
+    export class Subscription extends EventEmitter {
 
         private _platform:platform.Platform;
-        private _pubnubFactory:pubnub.PubnubFactory;
+        private _pubnubFactory:PubnubFactory;
         private _eventFilters:string[];
         private _subscription:ISubscription;
 
-        constructor(platform:platform.Platform, pubnubFactory:pubnub.PubnubFactory);
+        constructor(platform:platform.Platform, pubnubFactory:PubnubFactory) {
+            this._platform = platform;
+            this._pubnubFactory = pubnubFactory;
+        }
 
         // Working with events
 
@@ -105,23 +110,6 @@ module RingCentral.ReferenceSDK.subscription {
          */
         subscription():ISubscription;
 
-        // Observable
-
-        /**
-         * This should follow language convention -- e.g. addListener in PHP
-         */
-        on(event:string, callback:(...args)=>void):Subscription;
-
-        /**
-         * This should follow language convention -- e.g. addListener in PHP
-         */
-        off(event:string, callback:(...args)=>void):Subscription;
-
-        /**
-         * This should follow language convention -- e.g. addListener in PHP
-         */
-        emit(event:string, ...args):any;
-
         /**
          *
          * @return {string[]}
@@ -133,11 +121,12 @@ module RingCentral.ReferenceSDK.subscription {
         }
 
         private subscribeAtPubnub() {
-            this._pubnubFactory.getPubnub().subscribe(this._subscription);
+            this._pubnubFactory.init().subscribe(this._subscription);
         }
 
         /**
          * Must decode the AES-encrypted message (128-bit, mode ECB, padding PKCS7) and return it as JSON object
+         * It could be useful to use PUBNUB to decrypt
          */
         private decrypt(message:string):any;
 

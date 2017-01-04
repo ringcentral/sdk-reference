@@ -1,13 +1,21 @@
+/// <reference path="../externals/index.ts" />
+
 module RingCentral.ReferenceSDK.http {
 
     export class Client {
+
+        _httpClient:HttpClient;
+
+        constructor(httpClient:HttpClient){
+            this._httpClient = httpClient;
+        };
 
         /**
          * This is the public method
          * @throws ApiException
          * @param request
          */
-        sendRequest(request:native.Request):ApiResponse {
+        sendRequest(request:Request):ApiResponse {
 
             var apiResponse:ApiResponse;
 
@@ -47,15 +55,15 @@ module RingCentral.ReferenceSDK.http {
          * @param body
          * @param headers
          */
-        createRequest(method:string, url:string, queryParams?:any, body?:any, headers?:any):native.Request;
+        createRequest(method:string, url:string, queryParams?:any, body?:any, headers?:IHeadersObject):Request {
+            return new Request(method, url, queryParams, body, headers);
+        }
 
         /**
          * This is the internal method that actually sends the request and loads response
          */
-        protected loadResponse(request:native.Request):native.Response {
-
-            // Assume that this is returned by lower level HTTP transport (CURL for example)
-            return new native.Response(200, 'OK', '{}');
+        protected loadResponse(request:Request):Response {
+            return this._httpClient.send(request);
 
         }
 

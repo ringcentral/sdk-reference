@@ -1,10 +1,12 @@
+/// <reference path="../externals/index.ts" />
+
 module RingCentral.ReferenceSDK.platform {
 
     export declare interface ICallOptions {
         skipAuthCheck?: boolean;
     }
 
-    export class Platform {
+    export class Platform extends EventEmitter {
 
         private _auth:Auth;
         private _server:string;
@@ -36,7 +38,7 @@ module RingCentral.ReferenceSDK.platform {
         /**
          * @throws ApiException
          */
-        login(username:string, extension:string, password:string, remember?:boolean):http.ApiResponse {
+        login(username:string, extension:string, password:string):http.ApiResponse {
             return this.requestToken('', {});
         }
 
@@ -70,7 +72,7 @@ module RingCentral.ReferenceSDK.platform {
          * Then adds Authorization header and API server to URI
          * @throws ApiException
          */
-        inflateRequest(request:native.Request, options?:ICallOptions):native.Request {
+        inflateRequest(request:Request, options?:ICallOptions):Request {
             if (!options.skipAuthCheck) {
                 this.ensureAuthentication();
                 request.headers['Authorization'] = this.authHeader();
@@ -83,7 +85,7 @@ module RingCentral.ReferenceSDK.platform {
          * Method sends the request (even externally created) to API server using client
          * @throws ApiException
          */
-        sendRequest(request:native.Request, options?:ICallOptions):http.ApiResponse {
+        sendRequest(request:Request, options?:ICallOptions):http.ApiResponse {
             return this._client.sendRequest(this.inflateRequest(request, options));
         }
 
